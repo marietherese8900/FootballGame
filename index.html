@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Michael's Football Game!</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    :root {
+      --pitch-green: #2e8b57;
+      --deep-maroon: #660708;
+      --bright-gold: #ffed00;
+      --clean-white: #ffffff;
+      --dark-blue: #0a192f;
+      --barca-blue: #004d98;
+      --barca-red: #a50044;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle, var(--dark-blue) 0%, #000 100%);
+      color: var(--clean-white);
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none; /* Prevents default page scrolling while touching the game */
+    }
+
+    .container {
+      width: 95%;
+      max-width: 600px;
+      padding: 10px;
+      position: relative;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin: 5px 0 10px;
+      color: var(--bright-gold);
+      text-shadow: 2px 2px 4px var(--deep-maroon);
+    }
+
+    /* THE STADIUM PITCH */
+    #pitch {
+      width: 100%;
+      height: 350px;
+      background-color: var(--pitch-green);
+      background-image: 
+        linear-gradient(90deg, transparent 49%, rgba(255,255,255,0.3) 50%, transparent 51%),
+        linear-gradient(0deg, transparent 49%, rgba(255,255,255,0.3) 50%, transparent 51%);
+      background-size: 60px 60px;
+      border: 4px solid var(--bright-gold);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+
+    /* Goal Net on the right side */
+    .goal-net {
+      position: absolute;
+      right: 0;
+      top: 30%;
+      width: 45px;
+      height: 40%;
+      border: 3px solid white;
+      border-right: none;
+      background: repeating-linear-gradient(45deg, rgba(255,255,255,0.15), rgba(255,255,255,0.15) 5px, transparent 5px, transparent 10px);
+      z-index: 1;
+    }
+
+    /* Lamine Yamal (Passer) on the left */
+    #lamine {
+      position: absolute;
+      left: 20px;
+      top: 40%;
+      width: 55px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.8rem;
+      z-index: 2;
+    }
+
+    .avatar-head {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      border: 2px solid var(--bright-gold);
+      object-fit: cover;
+      background: white;
+    }
+
+    /* Michael (Miko) - Movable Player */
+    #miko {
+      position: absolute;
+      left: 250px;
+      top: 150px;
+      width: 70px;
+      height: 70px;
+      background-image: url('michael-avatar.png');
+      background-size: cover;
+      background-position: center;
+      border: 3px solid var(--bright-gold);
+      border-radius: 50%;
+      cursor: grab;
+      z-index: 5;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      touch-action: none;
+    }
+
+    #miko:active {
+      cursor: grabbing;
+    }
+
+    /* Football */
+    #ball {
+      position: absolute;
+      font-size: 1.8rem;
+      transition: all 0.4s ease-in-out;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: center;
+    }
+
+    button {
+      background: linear-gradient(45deg, var(--barca-red), #e6005c);
+      color: white;
+      border: 2px solid var(--bright-gold);
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .btn-pass {
+      background: linear-gradient(45deg, var(--bright-gold), #ffaa00);
+      color: #000;
+    }
+
+    .scoreboard {
+      margin-top: 12px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background: rgba(0,0,0,0.5);
+      padding: 8px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <audio id="birthdayVoice" src="voice.mp3" preload="auto"></audio>
+
+  <div class="container">
+    <h1>⚽ MIKO'S FOOTBALL CHALLENGE ⚽</h1>
+
+    <div id="pitch">
+      <div class="goal-net"></div>
+      
+      <!-- Lamine Yamal -->
+      <div id="lamine">
+        <img class="avatar-head" src="https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn:ANd9GcTs-PAGEQmLyioAwLBlYaD9YfUhFilcDdKqLW1w3b_lD0aSzRQQtOQHO_jh9EE3rtc9F4EezPCYAaWrP34" alt="Yamal">
+        <div style="color:white; text-shadow: 1px 1px black;">Yamal</div>
+      </div>
+
+      <!-- The Ball -->
+      <div id="ball" style="left: 75px; top: 160px;">⚽</div>
+
+      <!-- Michael (Draggable Player) -->
+      <div id="miko"></div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-pass" onclick="startPass()">🚀 YAMAL, PASS!</button>
+      <button onclick="playVoice()">🗣️ VOICE</button>
+    </div>
+
+    <div class="scoreboard">
+      Goals: <span id="goalCount" style="color: var(--bright-gold);">0</span> | Status: <span id="gameStatus" style="color: #70e000;">Drag Miko to catch the ball!</span>
+    </div>
+  </div>
+
+  <script>
+    let goals = 0;
+    let gameState = 'waiting'; // waiting, passing, caught, scoring
+    let ballTargetX = 0;
+    let ballTargetY = 0;
+
+    const ball = document.getElementById('ball');
+    const miko = document.getElementById('miko');
+    const pitch = document.getElementById('pitch');
+    const statusText = document.getElementById('gameStatus');
+
+    // --- TOUCH & MOUSE DRAGGING FOR MICHAEL ---
+    let isDragging = false;
+
+    miko.addEventListener('mousedown', startDrag);
+    miko.addEventListener('touchstart', startDrag, {passive: false});
+
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('touchmove', drag, {passive: false});
+
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
+
+    function startDrag(e) {
+      isDragging = true;
+      e.preventDefault();
+    }
+
+    function drag(e) {
+      if (!isDragging) return;
+      
+      const rect = pitch.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      let x = clientX - rect.left - 35;
+      let y = clientY - rect.top - 35;
+
+      // Keep Michael inside the pitch boundaries
+      const maxX = rect.width - 70;
+      const maxY = rect.height - 70;
+      x = Math.max(0, Math.min(x, maxX));
+      y = Math.max(0, Math.min(y, maxY));
+
+      miko.style.left = x + 'px';
+      miko.style.top = y + 'px';
+
+      // If Michael has caught the ball during a pass, move the ball with him toward the goal!
+      if (gameState === 'passing') {
+        checkCatch();
+      }
+    }
+
+    function endDrag() {
+      isDragging = false;
+    }
+
+    // --- GAME LOGIC: PASS & SCORE ---
+    function startPass() {
+      if (gameState === 'passing' || gameState === 'scoring') return;
+      gameState = 'passing';
+
+      // Reset ball position near Yamal
+      ball.style.left = '75px';
+      ball.style.top = '160px';
+
+      // Pick a random spot on the screen for Yamal to pass to
+      const pitchRect = pitch.getBoundingClientRect();
+      ballTargetX = Math.floor(Math.random() * (pitchRect.width * 0.5)) + 100;
+      ballTargetY = Math.floor(Math.random() * (pitchRect.height - 80));
+
+      statusText.innerText = "Yamal passed! Catch it with Miko!";
+      
+      // Animate ball moving to the random spot
+      ball.style.transition = 'all 0.8s ease-out';
+      ball.style.left = ballTargetX + 'px';
+      ball.style.top = ballTargetY + 'px';
+
+      // If Michael doesn't catch it in time, miss!
+      setTimeout(() => {
+        if (gameState === 'passing') {
+          statusText.innerText = "Missed! Try again!";
+          gameState = 'waiting';
+        }
+      }, 800);
+    }
+
+    function checkCatch() {
+      const mikoRect = miko.getBoundingClientRect();
+      const ballRect = ball.getBoundingClientRect();
+
+      // Check if Michael touches the ball
+      const distance = Math.hypot(
+        (mikoRect.left + mikoRect.width/2) - (ballRect.left + ballRect.width/2),
+        (mikoRect.top + mikoRect.height/2) - (ballRect.top + ballRect.height/2)
+      );
+
+      if (distance < 50) {
+        gameState = 'scoring';
+        statusText.innerText = "Caught! Shooting to goal!";
+        shootToGoal();
+      }
+    }
+
+    function shootToGoal() {
+      const pitchRect = pitch.getBoundingClientRect();
+      
+      // Shoot ball into the goal net on the right
+      ball.style.transition = 'all 0.5s ease-in-out';
+      ball.style.left = (pitchRect.width - 50) + 'px';
+      ball.style.top = (pitchRect.height / 2 - 20) + 'px';
+
+      setTimeout(() => {
+        goals++;
+        document.getElementById('goalCount').innerText = goals;
+        statusText.innerText = "GOOOOAL! 🎉 Drag Miko again!";
+
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { x: 0.8, y: 0.5 },
+          colors: ['#ffed00', '#660708', '#ffffff']
+        });
+
+        gameState = 'waiting';
+      }, 500);
+    }
+
+    function playVoice() {
+      const audio = document.getElementById('birthdayVoice');
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(e => alert("Tap the screen first to enable audio!"));
+      }
+    }
+  </script>
+
+</body>
+</html>
